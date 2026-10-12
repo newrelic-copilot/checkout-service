@@ -17,11 +17,11 @@ PRODUCTS = {
 
 def calculate_discount(price, coupon_code):
     """Apply discount based on coupon code."""
-    discounts = [
-        ("SAVE10", 0.10),
-        ("SAVE20", 0.20),
-        ("HALFOFF", 0.50),
-    ]
+    discounts = {
+        "SAVE10": 0.10,
+        "SAVE20": 0.20,
+        "HALFOFF": 0.50,
+    }
     rate = discounts.get(coupon_code, 0.0)
     return price * (1 - rate)
 
