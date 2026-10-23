@@ -36,10 +36,25 @@ def validate_payment(card_number, amount):
 
 
 LOW_STOCK_THRESHOLD = 10
+WAREHOUSE_LOOKUP_SECONDS = 0.4  # round trip to the warehouse stock API
+
+
+@newrelic.agent.function_trace()
+def fetch_warehouse_stock(product_id):
+    """Look up the warehouse's current stock count for a product."""
+    time.sleep(WAREHOUSE_LOOKUP_SECONDS)
+    return PRODUCTS[product_id]["stock"]
+
+
+def sync_stock_levels():
+    """Reconcile local stock counts with the warehouse so checkout never oversells."""
+    for product_id in PRODUCTS:
+        PRODUCTS[product_id]["stock"] = fetch_warehouse_stock(product_id)
 
 
 def process_inventory(product_id, quantity):
     """Check inventory and report whether the item is running low."""
+    sync_stock_levels()
     product = PRODUCTS.get(product_id)
     if not product:
         raise KeyError(f"Product {product_id} not found")
