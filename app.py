@@ -69,7 +69,7 @@ def checkout():
     newrelic.agent.add_custom_attribute("coupon_code", coupon_code)
 
     try:
-        product = process_inventory(product_id, quantity)
+        product, low_stock = process_inventory(product_id, quantity)
 
         unit_price = product["price"]
         total = unit_price * quantity
