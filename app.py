@@ -35,14 +35,18 @@ def validate_payment(card_number, amount):
     return True
 
 
+LOW_STOCK_THRESHOLD = 10
+
+
 def process_inventory(product_id, quantity):
-    """Check and update inventory."""
+    """Check inventory and report whether the item is running low."""
     product = PRODUCTS.get(product_id)
     if not product:
         raise KeyError(f"Product {product_id} not found")
     if product["stock"] < quantity:
         raise ValueError(f"Insufficient stock for {product_id}")
-    return product
+    low_stock = product["stock"] - quantity < LOW_STOCK_THRESHOLD
+    return product, low_stock
 
 
 @app.route("/health")
@@ -65,7 +69,7 @@ def checkout():
     newrelic.agent.add_custom_attribute("coupon_code", coupon_code)
 
     try:
-        product = process_inventory(product_id, quantity)
+        product, low_stock = process_inventory(product_id, quantity)
 
         unit_price = product["price"]
         total = unit_price * quantity
