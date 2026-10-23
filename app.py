@@ -54,7 +54,6 @@ def sync_stock_levels():
 
 def process_inventory(product_id, quantity):
     """Check inventory and report whether the item is running low."""
-    sync_stock_levels()
     product = PRODUCTS.get(product_id)
     if not product:
         raise KeyError(f"Product {product_id} not found")

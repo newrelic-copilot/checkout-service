@@ -79,6 +79,23 @@ class CheckoutTests(unittest.TestCase):
                 self.assertEqual(result["status"], "error")
                 self.assertIn(message, result["message"])
 
+    def test_checkout_does_not_fetch_warehouse_stock(self):
+        with patch("app.fetch_warehouse_stock", side_effect=AssertionError(
+            "Checkout must not wait for warehouse stock"
+        )) as fetch_stock:
+            for payload, expected_status in (
+                ({"product_id": "item-001"}, 200),
+                ({"product_id": "item-002"}, 200),
+                ({"product_id": "item-003"}, 200),
+                ({"product_id": "item-004"}, 200),
+                ({"product_id": "missing"}, 400),
+                ({"quantity": 51}, 400),
+            ):
+                with self.subTest(payload=payload):
+                    response = self.client.post("/checkout", json=payload)
+                    self.assertEqual(response.status_code, expected_status)
+                    fetch_stock.assert_not_called()
+
 
 if __name__ == "__main__":
     unittest.main()
