@@ -26,6 +26,14 @@ def calculate_discount(price, coupon_code):
     return price * (1 - rate)
 
 
+def apply_bulk_discount(total, quantity):
+    """Give a volume discount on larger orders."""
+    if quantity < BULK_MIN_QUANTITY:
+        return total
+    rate = BULK_TIER_DISCOUNTS.get(quantity)
+    return total * (1 - rate)
+
+
 def validate_payment(card_number, amount):
     """Validate payment details."""
     if not card_number or len(str(card_number)) < 16:
@@ -36,6 +44,8 @@ def validate_payment(card_number, amount):
 
 
 LOW_STOCK_THRESHOLD = 10
+BULK_MIN_QUANTITY = 3
+BULK_TIER_DISCOUNTS = {5: 0.05, 10: 0.10}  # quantity -> discount rate
 WAREHOUSE_LOOKUP_SECONDS = 0.4  # round trip to the warehouse stock API
 
 
@@ -91,6 +101,8 @@ def checkout():
 
         if coupon_code:
             total = calculate_discount(total, coupon_code)
+
+        total = apply_bulk_discount(total, quantity)
 
         validate_payment(card_number, total)
 
