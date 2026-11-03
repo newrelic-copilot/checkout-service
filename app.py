@@ -30,7 +30,7 @@ def apply_bulk_discount(total, quantity):
     """Give a volume discount on larger orders."""
     if quantity < BULK_MIN_QUANTITY:
         return total
-    rate = BULK_TIER_DISCOUNTS.get(quantity)
+    rate = BULK_TIER_DISCOUNTS.get(quantity, 0.0)
     return total * (1 - rate)
 
 

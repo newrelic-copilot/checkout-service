@@ -2,7 +2,7 @@ import unittest
 from unittest.mock import patch
 
 with patch("newrelic.agent.initialize"):
-    from app import app, calculate_discount
+    from app import app, apply_bulk_discount, calculate_discount
 
 
 class CheckoutTests(unittest.TestCase):
@@ -19,6 +19,44 @@ class CheckoutTests(unittest.TestCase):
         ):
             with self.subTest(coupon=coupon):
                 self.assertAlmostEqual(calculate_discount(100.0, coupon), expected)
+
+    def test_apply_bulk_discount(self):
+        for quantity, expected in (
+            (1, 100.0),
+            (2, 100.0),
+            (3, 100.0),
+            (4, 100.0),
+            (5, 95.0),
+            (6, 100.0),
+            (9, 100.0),
+            (10, 90.0),
+            (11, 100.0),
+        ):
+            with self.subTest(quantity=quantity):
+                self.assertAlmostEqual(apply_bulk_discount(100.0, quantity), expected)
+
+    def test_checkout_bulk_totals(self):
+        with patch("app.sync_stock_levels"):
+            for quantity, coupon, expected in (
+                (3, "", 239.97),
+                (4, "", 319.96),
+                (5, "", 379.95),
+                (6, "", 479.94),
+                (10, "", 719.91),
+                (11, "", 879.89),
+                (3, "SAVE10", 215.97),
+                (5, "SAVE10", 341.96),
+                (10, "SAVE10", 647.92),
+            ):
+                with self.subTest(quantity=quantity, coupon=coupon):
+                    response = self.client.post("/checkout", json={
+                        "product_id": "item-003",
+                        "quantity": quantity,
+                        "coupon_code": coupon,
+                    })
+                    self.assertEqual(response.status_code, 200)
+                    self.assertEqual(response.get_json()["status"], "success")
+                    self.assertEqual(response.get_json()["total"], expected)
 
     def test_checkout_coupon_totals(self):
         with app.test_client() as client:
@@ -69,6 +107,7 @@ class CheckoutTests(unittest.TestCase):
             ({"product_id": "missing"}, "Product missing not found"),
             ({"quantity": 51}, "Insufficient stock for item-001"),
             ({"card_number": "123"}, "Invalid card number"),
+            ({"quantity": 3, "card_number": "123"}, "Invalid card number"),
             ({"quantity": 0}, "Amount must be positive"),
         ):
             with self.subTest(payload=payload):
