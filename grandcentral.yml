@@ -3,7 +3,7 @@ display_name: "Checkout Service"
 team_name: 'incidentintelligence'
 identity:
   owning_team: Triage
-slack_channel: 'newrelic-pr-notifications-jp'
+slack_channel: 'divya-test-nr-10050'
 
 deploy_mechanism: general-purpose
 disable_default_environments: true
