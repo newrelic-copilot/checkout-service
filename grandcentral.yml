@@ -1,1 +1,50 @@
+project_name: "checkout-service"
+display_name: "Checkout Service"
+team_name: 'incidentintelligence'
+identity:
+  owning_team: Triage
 slack_channel: 'newrelic-pr-notifications-jp'
+
+deploy_mechanism: general-purpose
+disable_default_environments: true
+container_ports: [5001]
+
+docker_build:
+  publish_pull_requests: true
+
+base_environment:
+  allow_instances_to_be_destroyed: true
+  canaries: []
+  instances: 1
+  memory_mb: 512
+  cpus: 1
+  readiness_probe:
+    http_get:
+      path: /health
+      port: 5001
+    initial_delay_seconds: 10
+    period_seconds: 10
+    timeout_seconds: 5
+    failure_threshold: 3
+  liveness_probe:
+    http_get:
+      path: /health
+      port: 5001
+    initial_delay_seconds: 30
+    period_seconds: 15
+    timeout_seconds: 5
+    failure_threshold: 3
+  env_vars:
+    SERVICE_NAME: checkout-service
+
+environments:
+  - name: general-purpose-staging
+    deploy_mechanism: general-purpose
+    vault_environment: staging
+    auto_deploy_on_master_merge: false
+    env_vars:
+      SERVICE_NAME: "checkout-service (staging)"
+    autoscaling:
+      min_replicas: 1
+      max_replicas: 2
+      target_cpu_utilization_percentage: 70
