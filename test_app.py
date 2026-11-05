@@ -48,6 +48,34 @@ class CheckoutTests(unittest.TestCase):
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.get_json()["message"], "Invalid card number")
 
+    @patch("app.time.sleep")
+    def test_checkout_bulk_discount_totals(self, mock_sleep):
+        for quantity, bulk_rate in (
+            (2, 0.0),
+            (3, 0.0),
+            (4, 0.0),
+            (5, 0.05),
+            (6, 0.0),
+            (9, 0.0),
+            (10, 0.10),
+            (11, 0.0),
+        ):
+            for coupon, coupon_rate in (("", 0.0), ("SAVE20", 0.20)):
+                with self.subTest(quantity=quantity, coupon=coupon):
+                    response = self.client.post("/checkout", json={
+                        "product_id": "item-003",
+                        "quantity": quantity,
+                        "coupon_code": coupon,
+                    })
+
+                    self.assertEqual(response.status_code, 200)
+                    result = response.get_json()
+                    self.assertEqual(result["status"], "success")
+                    self.assertEqual(
+                        result["total"],
+                        round(79.99 * quantity * (1 - coupon_rate) * (1 - bulk_rate), 2),
+                    )
+
     def test_checkout_handles_inventory_tuple(self):
         for quantity in (1, 40, 41, 50):
             with self.subTest(quantity=quantity):
