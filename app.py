@@ -35,6 +35,25 @@ def validate_payment(card_number, amount):
     return True
 
 
+PAYMENT_GATEWAY_TIMEOUT_SECONDS = 0.3
+
+
+class PaymentGatewayTimeout(Exception):
+    """The payment gateway did not answer within the client timeout."""
+
+
+@newrelic.agent.function_trace()
+def charge_payment(card_number, amount):
+    """Charge the card through the payment gateway."""
+    gateway_latency = random.uniform(0.05, 0.4)  # gateway response time varies per call
+    if gateway_latency > PAYMENT_GATEWAY_TIMEOUT_SECONDS:
+        time.sleep(PAYMENT_GATEWAY_TIMEOUT_SECONDS)
+        raise PaymentGatewayTimeout(
+            f"Payment gateway timed out after {PAYMENT_GATEWAY_TIMEOUT_SECONDS}s"
+        )
+    time.sleep(gateway_latency)
+
+
 LOW_STOCK_THRESHOLD = 10
 
 
@@ -78,6 +97,7 @@ def checkout():
             total = calculate_discount(total, coupon_code)
 
         validate_payment(card_number, total)
+        charge_payment(card_number, total)
 
         order_id = f"ORD-{random.randint(10000, 99999)}"
 
@@ -108,6 +128,15 @@ def checkout():
             "quantity": quantity,
         })
         return jsonify({"status": "error", "message": str(e)}), 400
+
+    except PaymentGatewayTimeout as e:
+        newrelic.agent.notice_error()
+        newrelic.agent.record_custom_event("CheckoutFailed", {
+            "product_id": product_id,
+            "reason": "payment_gateway_timeout",
+            "quantity": quantity,
+        })
+        return jsonify({"status": "error", "message": "Payment service unavailable"}), 503
 
     except Exception as e:
         newrelic.agent.notice_error()
